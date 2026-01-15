@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mobile App Fun</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_entities">Entities</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home Screen -->
+    <string name="welcome_title">Welcome</string>
+    <string name="welcome_message">Add your entities, components, and assets here!</string>
+
+    <!-- Entities Screen -->
+    <string name="entities_title">Entities</string>
+    <string name="add_entity">Add Entity</string>
+    <string name="no_entities">No entities yet. Tap + to add one.</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+</resources>
