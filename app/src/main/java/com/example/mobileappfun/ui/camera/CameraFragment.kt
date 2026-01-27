@@ -30,12 +30,13 @@ import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class CameraFragment : Fragment() {
+class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
 
     private var _binding: FragmentCameraBinding? = null
     private val binding get() = _binding!!
@@ -45,15 +46,28 @@ class CameraFragment : Fragment() {
     private var cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var faceDetector: FaceDetector
+    private var handGestureHelper: HandGestureHelper? = null
     private var isFaceDetectionEnabled = true
+    private var isGestureDetectionEnabled = false
 
-    private val requestPermissionLauncher = registerForActivityResult(
+
+    private val requestCameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
             startCamera()
         } else {
             showPermissionUI()
+        }
+    }
+
+    private val requestStoragePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            showGalleryBottomSheet()
+        } else {
+            Toast.makeText(requireContext(), R.string.storage_permission_required, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -70,6 +84,7 @@ class CameraFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         cameraExecutor = Executors.newSingleThreadExecutor()
         setupFaceDetector()
+        setupGestureDetector()
         setupUI()
         checkCameraPermission()
     }
@@ -86,6 +101,14 @@ class CameraFragment : Fragment() {
         faceDetector = FaceDetection.getClient(options)
     }
 
+    private fun setupGestureDetector() {
+        try {
+            handGestureHelper = HandGestureHelper(requireContext(), this)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to setup gesture detector", e)
+        }
+    }
+
     private fun setupUI() {
         binding.captureButton.setOnClickListener {
             takePhoto()
@@ -95,8 +118,12 @@ class CameraFragment : Fragment() {
             switchCamera()
         }
 
+        binding.galleryButton.setOnClickListener {
+            openGallery()
+        }
+
         binding.requestPermissionButton.setOnClickListener {
-            requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+            requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
         binding.faceDetectionToggle.setOnCheckedChangeListener { _, isChecked ->
@@ -104,8 +131,14 @@ class CameraFragment : Fragment() {
             if (!isChecked) {
                 binding.faceOverlay.clearFaces()
                 binding.faceCountText.visibility = View.GONE
-            } else {
-                binding.faceCountText.visibility = View.VISIBLE
+            }
+        }
+
+        binding.gestureDetectionToggle.setOnCheckedChangeListener { _, isChecked ->
+            isGestureDetectionEnabled = isChecked
+            if (!isChecked) {
+                binding.handOverlay.clear()
+                binding.gestureText.visibility = View.GONE
             }
         }
     }
@@ -119,7 +152,7 @@ class CameraFragment : Fragment() {
                 startCamera()
             }
             else -> {
-                requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+                requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
         }
     }
@@ -127,9 +160,11 @@ class CameraFragment : Fragment() {
     private fun showPermissionUI() {
         binding.viewFinder.visibility = View.GONE
         binding.faceOverlay.visibility = View.GONE
+        binding.handOverlay.visibility = View.GONE
         binding.controlsContainer.visibility = View.GONE
-        binding.faceDetectionToggle.visibility = View.GONE
+        binding.detectionToggles.visibility = View.GONE
         binding.faceCountText.visibility = View.GONE
+        binding.gestureText.visibility = View.GONE
         binding.permissionMessage.visibility = View.VISIBLE
         binding.requestPermissionButton.visibility = View.VISIBLE
     }
@@ -137,9 +172,11 @@ class CameraFragment : Fragment() {
     private fun hidePermissionUI() {
         binding.viewFinder.visibility = View.VISIBLE
         binding.faceOverlay.visibility = View.VISIBLE
+        binding.handOverlay.visibility = View.VISIBLE
         binding.controlsContainer.visibility = View.VISIBLE
-        binding.faceDetectionToggle.visibility = View.VISIBLE
+        binding.detectionToggles.visibility = View.VISIBLE
         binding.faceCountText.visibility = if (isFaceDetectionEnabled) View.VISIBLE else View.GONE
+        binding.gestureText.visibility = View.GONE
         binding.permissionMessage.visibility = View.GONE
         binding.requestPermissionButton.visibility = View.GONE
     }
@@ -166,7 +203,7 @@ class CameraFragment : Fragment() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, FaceAnalyzer())
+                    it.setAnalyzer(cameraExecutor, CombinedAnalyzer())
                 }
 
             try {
@@ -189,32 +226,43 @@ class CameraFragment : Fragment() {
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
-    private inner class FaceAnalyzer : ImageAnalysis.Analyzer {
+    private inner class CombinedAnalyzer : ImageAnalysis.Analyzer {
         @OptIn(ExperimentalGetImage::class)
         override fun analyze(imageProxy: ImageProxy) {
-            if (!isFaceDetectionEnabled) {
-                imageProxy.close()
-                return
+            val isFrontCamera = cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
+
+            if (isGestureDetectionEnabled && handGestureHelper != null) {
+                handGestureHelper?.detectGestures(imageProxy, isFrontCamera)
             }
 
-            val mediaImage = imageProxy.image
-            if (mediaImage != null) {
-                val image = InputImage.fromMediaImage(
-                    mediaImage,
-                    imageProxy.imageInfo.rotationDegrees
-                )
+            if (isFaceDetectionEnabled) {
+                val mediaImage = imageProxy.image
+                if (mediaImage != null) {
+                    val image = InputImage.fromMediaImage(
+                        mediaImage,
+                        imageProxy.imageInfo.rotationDegrees
+                    )
 
-                faceDetector.process(image)
-                    .addOnSuccessListener { faces ->
-                        processFaces(faces, imageProxy.width, imageProxy.height)
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "Face detection failed", e)
-                    }
-                    .addOnCompleteListener {
-                        imageProxy.close()
-                    }
-            } else {
+                    faceDetector.process(image)
+                        .addOnSuccessListener { faces ->
+                            processFaces(faces, imageProxy.width, imageProxy.height)
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e(TAG, "Face detection failed", e)
+                        }
+                        .addOnCompleteListener {
+                            if (!isGestureDetectionEnabled) {
+                                imageProxy.close()
+                            }
+                        }
+                } else if (!isGestureDetectionEnabled) {
+                    imageProxy.close()
+                }
+            } else if (!isGestureDetectionEnabled) {
+                imageProxy.close()
+            }
+
+            if (isGestureDetectionEnabled) {
                 imageProxy.close()
             }
         }
@@ -236,6 +284,31 @@ class CameraFragment : Fragment() {
         }
     }
 
+    override fun onGestureResult(result: GestureRecognizerResult?, imageWidth: Int, imageHeight: Int) {
+        activity?.runOnUiThread {
+            if (_binding == null) return@runOnUiThread
+
+            binding.handOverlay.setResults(result, imageWidth, imageHeight)
+
+            if (result != null && result.gestures().isNotEmpty() && result.gestures()[0].isNotEmpty()) {
+                val gesture = result.gestures()[0][0]
+                val gestureName = HandGestureHelper.getGestureName(gesture.categoryName())
+                if (gestureName.isNotEmpty()) {
+                    binding.gestureText.text = "Gesture: $gestureName"
+                    binding.gestureText.visibility = View.VISIBLE
+                } else {
+                    binding.gestureText.visibility = View.GONE
+                }
+            } else {
+                binding.gestureText.visibility = View.GONE
+            }
+        }
+    }
+
+    override fun onGestureError(error: String) {
+        Log.e(TAG, "Gesture error: $error")
+    }
+
     private fun switchCamera() {
         cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
             CameraSelector.DEFAULT_FRONT_CAMERA
@@ -243,6 +316,7 @@ class CameraFragment : Fragment() {
             CameraSelector.DEFAULT_BACK_CAMERA
         }
         binding.faceOverlay.clearFaces()
+        binding.handOverlay.clear()
         startCamera()
     }
 
@@ -291,10 +365,37 @@ class CameraFragment : Fragment() {
         )
     }
 
+    private fun openGallery() {
+        checkStoragePermissionAndShowGallery()
+    }
+
+    private fun checkStoragePermissionAndShowGallery() {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        when {
+            ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED -> {
+                showGalleryBottomSheet()
+            }
+            else -> {
+                requestStoragePermissionLauncher.launch(permission)
+            }
+        }
+    }
+
+    private fun showGalleryBottomSheet() {
+        val bottomSheet = PhotoGalleryBottomSheet()
+        bottomSheet.show(parentFragmentManager, PhotoGalleryBottomSheet.TAG)
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         cameraExecutor.shutdown()
         faceDetector.close()
+        handGestureHelper?.close()
         _binding = null
     }
 

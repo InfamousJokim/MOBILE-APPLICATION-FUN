@@ -29,4 +29,10 @@
     <string name="photo_save_failed">Failed to save photo</string>
     <string name="face_detection">Face Detection</string>
     <string name="faces_detected">Faces: %d</string>
+    <string name="gesture_detection">Gestures</string>
+    <string name="open_gallery">Open Gallery</string>
+    <string name="gallery_title">Photos</string>
+    <string name="no_photos">No photos yet. Start capturing!</string>
+    <string name="photo_thumbnail">Photo thumbnail</string>
+    <string name="storage_permission_required">Storage permission is required to view photos</string>
 </resources>

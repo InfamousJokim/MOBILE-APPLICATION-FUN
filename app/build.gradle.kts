@@ -73,6 +73,12 @@ dependencies {
     // ML Kit Face Detection
     implementation("com.google.mlkit:face-detection:16.1.6")
 
+    // MediaPipe for Hand Gesture Recognition
+    implementation("com.google.mediapipe:tasks-vision:0.10.9")
+
+    // Image Loading
+    implementation("io.coil-kt:coil:2.5.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

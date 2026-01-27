@@ -25,18 +25,57 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/faceDetectionToggle"
+    <com.example.mobileappfun.ui.camera.HandOverlayView
+        android:id="@+id/handOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/controlsContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/detectionToggles"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:text="@string/face_detection"
-        android:textColor="@android:color/white"
-        android:checkable="true"
-        android:checked="true"
-        app:chipBackgroundColor="@color/chip_background_color"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/faceDetectionToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/face_detection"
+            android:textColor="@android:color/white"
+            android:checkable="true"
+            android:checked="true"
+            app:chipBackgroundColor="@color/chip_background_color" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/gestureDetectionToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/gesture_detection"
+            android:textColor="@android:color/white"
+            android:checkable="true"
+            android:checked="false"
+            app:chipBackgroundColor="@color/chip_background_color" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <TextView
+        android:id="@+id/gestureText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/faceCountText"
+        tools:text="Gesture: Thumbs Up"
+        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/faceCountText"
@@ -113,12 +152,18 @@
             app:layout_constraintTop_toTopOf="parent"
             app:tint="@android:color/black" />
 
-        <View
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/galleryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/open_gallery"
+            android:src="@drawable/ic_gallery"
+            app:backgroundTint="@android:color/darker_gray"
+            app:fabSize="normal"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@android:color/white" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
