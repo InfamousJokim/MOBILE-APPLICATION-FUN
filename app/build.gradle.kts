@@ -63,6 +63,16 @@ dependencies {
     // RecyclerView for lists
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 
+    // CameraX
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // ML Kit Face Detection
+    implementation("com.google.mlkit:face-detection:16.1.6")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
