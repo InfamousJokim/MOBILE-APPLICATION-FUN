@@ -231,6 +231,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
         override fun analyze(imageProxy: ImageProxy) {
             val isFrontCamera = cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
 
+            // Run gesture detection first (synchronously creates bitmap from imageProxy)
             if (isGestureDetectionEnabled && handGestureHelper != null) {
                 handGestureHelper?.detectGestures(imageProxy, isFrontCamera)
             }
@@ -251,18 +252,15 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
                             Log.e(TAG, "Face detection failed", e)
                         }
                         .addOnCompleteListener {
-                            if (!isGestureDetectionEnabled) {
-                                imageProxy.close()
-                            }
+                            // Always close imageProxy here when face detection is active,
+                            // since face detection is async and needs the proxy until done
+                            imageProxy.close()
                         }
-                } else if (!isGestureDetectionEnabled) {
+                } else {
                     imageProxy.close()
                 }
-            } else if (!isGestureDetectionEnabled) {
-                imageProxy.close()
-            }
-
-            if (isGestureDetectionEnabled) {
+            } else {
+                // No face detection running, safe to close immediately
                 imageProxy.close()
             }
         }
@@ -317,6 +315,9 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
         }
         binding.faceOverlay.clearFaces()
         binding.handOverlay.clear()
+        // Re-initialize gesture recognizer to reset timestamp tracking for LIVE_STREAM mode
+        handGestureHelper?.close()
+        setupGestureDetector()
         startCamera()
     }
 
