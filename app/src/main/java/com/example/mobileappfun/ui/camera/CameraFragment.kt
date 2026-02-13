@@ -25,6 +25,9 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.mobileappfun.R
 import com.example.mobileappfun.databinding.FragmentCameraBinding
+import com.example.mobileappfun.ui.camera.game.GameResultDialog
+import com.example.mobileappfun.ui.camera.game.GestureGame
+import com.example.mobileappfun.ui.camera.game.GesturePrompt
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -36,7 +39,7 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
+class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGame.GameCallback {
 
     private var _binding: FragmentCameraBinding? = null
     private val binding get() = _binding!!
@@ -50,6 +53,12 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
     private var isFaceDetectionEnabled = true
     private var isGestureDetectionEnabled = false
 
+    // Game state
+    private var gestureGame: GestureGame? = null
+    private var isGameActive = false
+    private var preFaceSavedState = true
+    private var preGestureSavedState = false
+    private var preCameraSelectorSaved: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
     private val requestCameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -141,7 +150,139 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
                 binding.gestureText.visibility = View.GONE
             }
         }
+
+        binding.playGameButton.setOnClickListener {
+            startGame()
+        }
     }
+
+    // --- Game Lifecycle ---
+
+    private fun startGame() {
+        if (isGameActive) return
+
+        // Save pre-game state
+        preFaceSavedState = isFaceDetectionEnabled
+        preGestureSavedState = isGestureDetectionEnabled
+        preCameraSelectorSaved = cameraSelector
+
+        // Force-enable face + gesture detection
+        isFaceDetectionEnabled = true
+        isGestureDetectionEnabled = true
+        binding.faceDetectionToggle.isChecked = true
+        binding.gestureDetectionToggle.isChecked = true
+
+        // Switch to front camera if not already
+        if (cameraSelector != CameraSelector.DEFAULT_FRONT_CAMERA) {
+            cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+            binding.faceOverlay.clearFaces()
+            binding.handOverlay.clear()
+            handGestureHelper?.close()
+            setupGestureDetector()
+            startCamera()
+        }
+
+        isGameActive = true
+
+        // Show game overlays, hide normal UI
+        binding.gameOverlay.visibility = View.VISIBLE
+        binding.gameFaceEffects.visibility = View.VISIBLE
+        binding.particleEffect.visibility = View.VISIBLE
+        binding.playGameButton.visibility = View.GONE
+        binding.detectionToggles.visibility = View.GONE
+        binding.faceCountText.visibility = View.GONE
+        binding.gestureText.visibility = View.GONE
+        binding.controlsContainer.visibility = View.GONE
+
+        // Start game engine
+        gestureGame = GestureGame(this)
+        gestureGame?.startGame()
+    }
+
+    private fun stopGame() {
+        gestureGame?.stopGame()
+        gestureGame = null
+        isGameActive = false
+
+        // Reset game overlays
+        binding.gameOverlay.reset()
+        binding.gameFaceEffects.reset()
+        binding.particleEffect.clear()
+        binding.gameOverlay.visibility = View.GONE
+        binding.gameFaceEffects.visibility = View.GONE
+        binding.particleEffect.visibility = View.GONE
+
+        // Restore pre-game state
+        isFaceDetectionEnabled = preFaceSavedState
+        isGestureDetectionEnabled = preGestureSavedState
+        binding.faceDetectionToggle.isChecked = preFaceSavedState
+        binding.gestureDetectionToggle.isChecked = preGestureSavedState
+
+        // Restore camera
+        if (cameraSelector != preCameraSelectorSaved) {
+            cameraSelector = preCameraSelectorSaved
+            binding.faceOverlay.clearFaces()
+            binding.handOverlay.clear()
+            handGestureHelper?.close()
+            setupGestureDetector()
+            startCamera()
+        }
+
+        // Restore normal UI
+        binding.playGameButton.visibility = View.VISIBLE
+        binding.detectionToggles.visibility = View.VISIBLE
+        binding.controlsContainer.visibility = View.VISIBLE
+        binding.faceCountText.visibility = if (isFaceDetectionEnabled) View.VISIBLE else View.GONE
+    }
+
+    // --- GestureGame.GameCallback ---
+
+    override fun onCountdown(value: Int) {
+        binding.gameOverlay.showCountdown(value)
+    }
+
+    override fun onCountdownGo() {
+        binding.gameOverlay.showGo()
+    }
+
+    override fun onRoundStart(round: Int, totalRounds: Int, prompt: GesturePrompt) {
+        binding.gameOverlay.showPrompt(prompt, round, totalRounds)
+        binding.gameFaceEffects.showGhostPrompt(prompt.emoji)
+    }
+
+    override fun onTimerTick(millisRemaining: Long, totalMillis: Long) {
+        binding.gameOverlay.updateTimer(millisRemaining, totalMillis)
+    }
+
+    override fun onGestureMatched(points: Int, totalScore: Int, streak: Int) {
+        binding.gameOverlay.updateScore(totalScore)
+        binding.gameOverlay.showMatchFeedback(points, streak)
+        binding.gameFaceEffects.showMatchEffect()
+        binding.particleEffect.burst()
+    }
+
+    override fun onGestureTimeout() {
+        binding.gameOverlay.showTimeoutFeedback()
+        binding.gameFaceEffects.showTimeoutEffect()
+    }
+
+    override fun onGameOver(score: Int, correctCount: Int, totalRounds: Int, bestStreak: Int) {
+        val dialog = GameResultDialog.newInstance(score, correctCount, totalRounds, bestStreak)
+        dialog.onPlayAgain = {
+            stopGame()
+            startGame()
+        }
+        dialog.onClose = {
+            stopGame()
+        }
+        dialog.show(parentFragmentManager, GameResultDialog.TAG)
+    }
+
+    override fun onStateChanged(state: GestureGame.State) {
+        // Additional state-change handling if needed
+    }
+
+    // --- Camera & Detection ---
 
     private fun checkCameraPermission() {
         when {
@@ -165,6 +306,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
         binding.detectionToggles.visibility = View.GONE
         binding.faceCountText.visibility = View.GONE
         binding.gestureText.visibility = View.GONE
+        binding.playGameButton.visibility = View.GONE
         binding.permissionMessage.visibility = View.VISIBLE
         binding.requestPermissionButton.visibility = View.VISIBLE
     }
@@ -175,6 +317,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
         binding.handOverlay.visibility = View.VISIBLE
         binding.controlsContainer.visibility = View.VISIBLE
         binding.detectionToggles.visibility = View.VISIBLE
+        binding.playGameButton.visibility = View.VISIBLE
         binding.faceCountText.visibility = if (isFaceDetectionEnabled) View.VISIBLE else View.GONE
         binding.gestureText.visibility = View.GONE
         binding.permissionMessage.visibility = View.GONE
@@ -273,11 +416,18 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
             val isFrontCamera = cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
             binding.faceOverlay.setFaces(faces, imageWidth, imageHeight, isFrontCamera)
 
-            if (faces.isNotEmpty()) {
-                binding.faceCountText.text = getString(R.string.faces_detected, faces.size)
-                binding.faceCountText.visibility = View.VISIBLE
-            } else {
-                binding.faceCountText.visibility = View.GONE
+            // Forward face data to game face effects
+            if (isGameActive) {
+                binding.gameFaceEffects.setFaceData(faces, imageWidth, imageHeight, isFrontCamera)
+            }
+
+            if (!isGameActive) {
+                if (faces.isNotEmpty()) {
+                    binding.faceCountText.text = getString(R.string.faces_detected, faces.size)
+                    binding.faceCountText.visibility = View.VISIBLE
+                } else {
+                    binding.faceCountText.visibility = View.GONE
+                }
             }
         }
     }
@@ -288,17 +438,33 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
 
             binding.handOverlay.setResults(result, imageWidth, imageHeight)
 
-            if (result != null && result.gestures().isNotEmpty() && result.gestures()[0].isNotEmpty()) {
-                val gesture = result.gestures()[0][0]
-                val gestureName = HandGestureHelper.getGestureName(gesture.categoryName())
-                if (gestureName.isNotEmpty()) {
-                    binding.gestureText.text = "Gesture: $gestureName"
-                    binding.gestureText.visibility = View.VISIBLE
+            val detectedCategory: String? = if (result != null &&
+                result.gestures().isNotEmpty() &&
+                result.gestures()[0].isNotEmpty()
+            ) {
+                result.gestures()[0][0].categoryName()
+            } else {
+                null
+            }
+
+            // Forward gesture to game engine
+            if (isGameActive) {
+                gestureGame?.onGestureDetected(detectedCategory)
+            }
+
+            // Show gesture text only when game is not active
+            if (!isGameActive) {
+                if (detectedCategory != null) {
+                    val gestureName = HandGestureHelper.getGestureName(detectedCategory)
+                    if (gestureName.isNotEmpty()) {
+                        binding.gestureText.text = "Gesture: $gestureName"
+                        binding.gestureText.visibility = View.VISIBLE
+                    } else {
+                        binding.gestureText.visibility = View.GONE
+                    }
                 } else {
                     binding.gestureText.visibility = View.GONE
                 }
-            } else {
-                binding.gestureText.visibility = View.GONE
             }
         }
     }
@@ -394,6 +560,8 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        gestureGame?.stopGame()
+        gestureGame = null
         cameraExecutor.shutdown()
         faceDetector.close()
         handGestureHelper?.close()

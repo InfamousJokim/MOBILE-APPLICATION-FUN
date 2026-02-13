@@ -24,4 +24,11 @@
     <color name="on_background">#FF000000</color>
     <color name="on_surface">#FF000000</color>
     <color name="on_error">#FFFFFFFF</color>
+
+    <!-- Game colors -->
+    <color name="game_success">#FF4CAF50</color>
+    <color name="game_danger">#FFF44336</color>
+    <color name="game_warning">#FFFFC107</color>
+    <color name="game_streak_gold">#FFFFD700</color>
+    <color name="game_overlay_bg">#99000000</color>
 </resources>

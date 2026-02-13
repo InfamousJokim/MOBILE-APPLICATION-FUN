@@ -35,4 +35,18 @@
     <string name="no_photos">No photos yet. Start capturing!</string>
     <string name="photo_thumbnail">Photo thumbnail</string>
     <string name="storage_permission_required">Storage permission is required to view photos</string>
+
+    <!-- Gesture Game -->
+    <string name="play_game">Play Game</string>
+    <string name="game_score">Score: %d</string>
+    <string name="game_round">Round %1$d/%2$d</string>
+    <string name="game_matched">Matched!</string>
+    <string name="game_times_up">Time\'s Up!</string>
+    <string name="game_over">Game Over</string>
+    <string name="game_final_score">Final Score: %d</string>
+    <string name="game_accuracy">Accuracy: %1$d/%2$d</string>
+    <string name="game_best_streak">Best Streak: %d</string>
+    <string name="game_play_again">Play Again</string>
+    <string name="game_close">Close</string>
+    <string name="game_great_job">Great Job!</string>
 </resources>
