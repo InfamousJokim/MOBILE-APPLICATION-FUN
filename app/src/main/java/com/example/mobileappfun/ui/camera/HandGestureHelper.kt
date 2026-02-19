@@ -60,6 +60,8 @@ class HandGestureHelper(
     private var lastImageHeight = 0
 
     fun detectGestures(imageProxy: ImageProxy, isFrontCamera: Boolean) {
+        val recognizer = gestureRecognizer ?: return
+
         val bitmap = imageProxy.toBitmap()
         lastImageWidth = bitmap.width
         lastImageHeight = bitmap.height
@@ -81,7 +83,13 @@ class HandGestureHelper(
         val mpImage = BitmapImageBuilder(rotatedBitmap).build()
         val timestamp = imageProxy.imageInfo.timestamp / 1000
 
-        gestureRecognizer?.recognizeAsync(mpImage, timestamp)
+        try {
+            recognizer.recognizeAsync(mpImage, timestamp)
+        } catch (e: IllegalArgumentException) {
+            // MediaPipe requires strictly increasing timestamps in LIVE_STREAM mode.
+            // On emulators, frames can arrive with duplicate or out-of-order timestamps.
+            Log.w(TAG, "Skipped frame due to timestamp issue: ${e.message}")
+        }
     }
 
     fun close() {

@@ -330,26 +330,43 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
 
         cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
-                }
-
-            imageCapture = ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .build()
-
-            imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor, CombinedAnalyzer())
-                }
-
             try {
+                val cameraProvider = cameraProviderFuture.get()
+
+                // Verify the selected camera is available (emulators may not have all cameras)
+                if (!cameraProvider.hasCamera(cameraSelector)) {
+                    Log.w(TAG, "Selected camera not available, trying fallback")
+                    val fallback = if (cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA)
+                        CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
+                    if (cameraProvider.hasCamera(fallback)) {
+                        cameraSelector = fallback
+                    } else {
+                        Toast.makeText(
+                            requireContext(),
+                            "No camera available. If using an emulator, enable camera in AVD settings.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@addListener
+                    }
+                }
+
+                val preview = Preview.Builder()
+                    .build()
+                    .also {
+                        it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+                    }
+
+                imageCapture = ImageCapture.Builder()
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                    .build()
+
+                imageAnalysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .also {
+                        it.setAnalyzer(cameraExecutor, CombinedAnalyzer())
+                    }
+
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     viewLifecycleOwner,
@@ -359,11 +376,11 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
                     imageAnalysis
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Camera binding failed", e)
+                Log.e(TAG, "Camera startup failed", e)
                 Toast.makeText(
                     requireContext(),
                     "Failed to start camera: ${e.message}",
-                    Toast.LENGTH_SHORT
+                    Toast.LENGTH_LONG
                 ).show()
             }
         }, ContextCompat.getMainExecutor(requireContext()))
@@ -376,7 +393,11 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
 
             // Run gesture detection first (synchronously creates bitmap from imageProxy)
             if (isGestureDetectionEnabled && handGestureHelper != null) {
-                handGestureHelper?.detectGestures(imageProxy, isFrontCamera)
+                try {
+                    handGestureHelper?.detectGestures(imageProxy, isFrontCamera)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Gesture detection failed for frame", e)
+                }
             }
 
             if (isFaceDetectionEnabled) {
