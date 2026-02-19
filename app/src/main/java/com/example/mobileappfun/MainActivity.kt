@@ -6,6 +6,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.example.mobileappfun.databinding.ActivityMainBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.mobileappfun.ui.login.LoginActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -13,6 +14,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // ── Retrieve authenticated user from LoginActivity ──
+        val userId = intent.getLongExtra(LoginActivity.EXTRA_USER_ID, -1L)
+        val username = intent.getStringExtra(LoginActivity.EXTRA_USERNAME) ?: "Player"
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
