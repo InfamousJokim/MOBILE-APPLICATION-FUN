@@ -3,6 +3,10 @@ package com.example.mobileappfun.ui.camera
 import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -26,6 +30,7 @@ import androidx.fragment.app.Fragment
 import com.example.mobileappfun.R
 import com.example.mobileappfun.databinding.FragmentCameraBinding
 import com.example.mobileappfun.ui.camera.game.GameResultDialog
+import com.example.mobileappfun.ui.camera.game.GameSoundManager
 import com.example.mobileappfun.ui.camera.game.GestureGame
 import com.example.mobileappfun.ui.camera.game.GesturePrompt
 import com.google.mlkit.vision.common.InputImage
@@ -38,6 +43,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.sqrt
 
 class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGame.GameCallback {
 
@@ -59,6 +65,35 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
     private var preFaceSavedState = true
     private var preGestureSavedState = false
     private var preCameraSelectorSaved: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+    // Sound manager
+    private var soundManager: GameSoundManager? = null
+
+    // Shake detection
+    private lateinit var sensorManager: SensorManager
+    private var accelerometer: Sensor? = null
+    private var lastShakeTime = 0L
+
+    private val shakeListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            if (!isGameActive || gestureGame?.state != GestureGame.State.PLAYING_ROUND) return
+
+            val x = event.values[0]
+            val y = event.values[1]
+            val z = event.values[2]
+            val netAcceleration = sqrt((x * x + y * y + z * z).toDouble()).toFloat() - SensorManager.GRAVITY_EARTH
+
+            if (netAcceleration > SHAKE_THRESHOLD) {
+                val now = System.currentTimeMillis()
+                if (now - lastShakeTime > SHAKE_COOLDOWN_MS) {
+                    lastShakeTime = now
+                    onShakeDetected()
+                }
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+    }
 
     private val requestCameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -92,10 +127,24 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         cameraExecutor = Executors.newSingleThreadExecutor()
+        sensorManager = requireContext().getSystemService(android.content.Context.SENSOR_SERVICE) as SensorManager
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         setupFaceDetector()
         setupGestureDetector()
         setupUI()
         checkCameraPermission()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        accelerometer?.let {
+            sensorManager.registerListener(shakeListener, it, SensorManager.SENSOR_DELAY_GAME)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(shakeListener)
     }
 
     private fun setupFaceDetector() {
@@ -194,6 +243,12 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
         binding.gestureText.visibility = View.GONE
         binding.controlsContainer.visibility = View.GONE
 
+        // Start sound manager
+        if (soundManager == null) {
+            soundManager = GameSoundManager(requireContext())
+            soundManager?.init()
+        }
+
         // Start game engine
         gestureGame = GestureGame(this)
         gestureGame?.startGame()
@@ -203,6 +258,10 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
         gestureGame?.stopGame()
         gestureGame = null
         isGameActive = false
+
+        // Release sound manager
+        soundManager?.release()
+        soundManager = null
 
         // Reset game overlays
         binding.gameOverlay.reset()
@@ -235,14 +294,27 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
         binding.faceCountText.visibility = if (isFaceDetectionEnabled) View.VISIBLE else View.GONE
     }
 
+    // --- Shake Detection ---
+
+    private fun onShakeDetected() {
+        activity?.runOnUiThread {
+            if (_binding == null || !isGameActive) return@runOnUiThread
+            gestureGame?.skipRound()
+            binding.gameOverlay.showShakeFeedback()
+            soundManager?.playShakeSkip()
+        }
+    }
+
     // --- GestureGame.GameCallback ---
 
     override fun onCountdown(value: Int) {
         binding.gameOverlay.showCountdown(value)
+        soundManager?.playCountdownBeep(value)
     }
 
     override fun onCountdownGo() {
         binding.gameOverlay.showGo()
+        soundManager?.playGo()
     }
 
     override fun onRoundStart(round: Int, totalRounds: Int, prompt: GesturePrompt) {
@@ -259,14 +331,17 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
         binding.gameOverlay.showMatchFeedback(points, streak)
         binding.gameFaceEffects.showMatchEffect()
         binding.particleEffect.burst()
+        soundManager?.playMatch()
     }
 
     override fun onGestureTimeout() {
         binding.gameOverlay.showTimeoutFeedback()
         binding.gameFaceEffects.showTimeoutEffect()
+        soundManager?.playTimeout()
     }
 
     override fun onGameOver(score: Int, correctCount: Int, totalRounds: Int, bestStreak: Int) {
+        soundManager?.playGameOver()
         val dialog = GameResultDialog.newInstance(score, correctCount, totalRounds, bestStreak)
         dialog.onPlayAgain = {
             stopGame()
@@ -583,6 +658,9 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
         super.onDestroyView()
         gestureGame?.stopGame()
         gestureGame = null
+        soundManager?.release()
+        soundManager = null
+        sensorManager.unregisterListener(shakeListener)
         cameraExecutor.shutdown()
         faceDetector.close()
         handGestureHelper?.close()
@@ -592,5 +670,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
     companion object {
         private const val TAG = "CameraFragment"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+        private const val SHAKE_THRESHOLD = 8f   // m/s² net acceleration above gravity
+        private const val SHAKE_COOLDOWN_MS = 1500L
     }
 }

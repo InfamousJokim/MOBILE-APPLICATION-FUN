@@ -68,6 +68,13 @@ class GestureGame(private val callback: GameCallback) {
         changeState(State.IDLE)
     }
 
+    /** Skip the current round (e.g. triggered by shake). Counts as a timeout. */
+    fun skipRound() {
+        if (state != State.PLAYING_ROUND) return
+        roundTimer?.cancel()
+        onTimeout()
+    }
+
     fun onGestureDetected(categoryName: String?) {
         if (state != State.PLAYING_ROUND) return
         val prompt = currentPrompt ?: return
