@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -42,7 +43,7 @@ class HomeFragment : Fragment() {
 
     private fun setupUI() {
         binding.playButton.setOnClickListener {
-            findNavController().navigate(R.id.cameraFragment)
+            findNavController().navigate(R.id.cameraFragment, bundleOf("autoStart" to true))
         }
 
         binding.leaderboardButton.setOnClickListener {

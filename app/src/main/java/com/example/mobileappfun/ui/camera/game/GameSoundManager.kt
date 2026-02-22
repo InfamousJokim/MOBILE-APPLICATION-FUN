@@ -1,67 +1,91 @@
 package com.example.mobileappfun.ui.camera.game
 
 import android.content.Context
-import android.media.AudioManager
-import android.media.ToneGenerator
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.SoundPool
+import com.example.mobileappfun.R
 
 /**
- * Manages all game sound effects using ToneGenerator.
- * For background music, add a file named "game_music.mp3" to res/raw/ and
- * uncomment the MediaPlayer block in startBackgroundMusic().
+ * Manages all game audio:
+ *  - Background music (MediaPlayer, looping) → res/raw/bgm_game.mp3
+ *  - Correct gesture sound (SoundPool)        → res/raw/sound_correct.wav
+ *  - Failed / timeout sound (SoundPool)       → res/raw/sound_failed.wav
+ *  - Game completed sound (SoundPool)         → res/raw/sound_game_complete.wav
  */
 class GameSoundManager(private val context: Context) {
 
-    private var toneGen: ToneGenerator? = null
+    // Background music
+    private var mediaPlayer: MediaPlayer? = null
+
+    // Short sound effects
+    private var soundPool: SoundPool? = null
+    private var soundCorrect: Int = 0
+    private var soundFailed: Int = 0
+    private var soundGameComplete: Int = 0
 
     fun init() {
+        initSoundPool()
+        startBackgroundMusic()
+    }
+
+    private fun initSoundPool() {
+        val attrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_GAME)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+        soundPool = SoundPool.Builder()
+            .setMaxStreams(4)
+            .setAudioAttributes(attrs)
+            .build()
+
+        soundCorrect = soundPool?.load(context, R.raw.sound_correct, 1) ?: 0
+        soundFailed = soundPool?.load(context, R.raw.sound_failed, 1) ?: 0
+        soundGameComplete = soundPool?.load(context, R.raw.sound_game_complete, 1) ?: 0
+    }
+
+    private fun startBackgroundMusic() {
         try {
-            toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 80)
-        } catch (e: RuntimeException) {
-            // ToneGenerator not available on this device
+            mediaPlayer = MediaPlayer.create(context, R.raw.bgm_game)?.apply {
+                isLooping = true
+                setVolume(0.5f, 0.5f)
+                start()
+            }
+        } catch (e: Exception) {
+            // Audio not available on this device
         }
     }
 
-    /** Play a countdown beep. step = 3, 2, or 1. */
-    fun playCountdownBeep(step: Int) {
-        val tone = if (step > 1) ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_CDMA_PIP
-        play(tone, 250)
-    }
-
-    /** Play the "GO!" fanfare sound. */
-    fun playGo() {
-        play(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)
-    }
-
-    /** Play a success chime when a gesture is matched. */
+    /** Played when a gesture is correctly matched. */
     fun playMatch() {
-        play(ToneGenerator.TONE_PROP_ACK, 200)
+        soundPool?.play(soundCorrect, 1f, 1f, 1, 0, 1f)
     }
 
-    /** Play an error buzz when time runs out. */
-    fun playTimeout() {
-        play(ToneGenerator.TONE_PROP_NACK, 400)
+    /** Played when a round times out or the player shakes to skip. */
+    fun playFailed() {
+        soundPool?.play(soundFailed, 1f, 1f, 1, 0, 1f)
     }
 
-    /** Play a game-over fanfare. */
+    /** Played at the end of the game. Stops background music first. */
     fun playGameOver() {
-        play(ToneGenerator.TONE_CDMA_ABBR_REORDER, 800)
-    }
-
-    /** Play a fun skip sound when the player shakes to skip. */
-    fun playShakeSkip() {
-        play(ToneGenerator.TONE_CDMA_ABBR_INTERCEPT, 250)
+        stopBackgroundMusic()
+        soundPool?.play(soundGameComplete, 1f, 1f, 1, 0, 1f)
     }
 
     fun release() {
+        stopBackgroundMusic()
         try {
-            toneGen?.release()
+            soundPool?.release()
         } catch (e: Exception) { /* ignore */ }
-        toneGen = null
+        soundPool = null
     }
 
-    private fun play(tone: Int, durationMs: Int) {
+    private fun stopBackgroundMusic() {
         try {
-            toneGen?.startTone(tone, durationMs)
-        } catch (e: Exception) { /* ignore if audio unavailable */ }
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+        } catch (e: Exception) { /* ignore */ }
+        mediaPlayer = null
     }
 }

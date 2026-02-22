@@ -30,6 +30,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.example.mobileappfun.R
 import com.example.mobileappfun.databinding.FragmentCameraBinding
 import com.example.mobileappfun.ui.camera.game.GameResultDialog
@@ -41,6 +42,7 @@ import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.face.FaceLandmark
 import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -65,12 +67,18 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
     // Game state
     private var gestureGame: GestureGame? = null
     private var isGameActive = false
+    private var autoStartGame = false
     private var preFaceSavedState = true
     private var preGestureSavedState = false
     private var preCameraSelectorSaved: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
     // Sound manager
     private var soundManager: GameSoundManager? = null
+
+    // Mouth position in normalized coordinates (updated each frame from face detection).
+    // -1 means no face visible. Used for Finger_On_Mouth gesture detection.
+    private var mouthNormX = -1f
+    private var mouthNormY = -1f
 
     private val mainViewModel: MainViewModel by activityViewModels {
         MainViewModelFactory(requireActivity().applicationContext)
@@ -136,6 +144,13 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
         cameraExecutor = Executors.newSingleThreadExecutor()
         sensorManager = requireContext().getSystemService(android.content.Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+        // If launched from main menu Play button, pre-set front camera and auto-start game
+        autoStartGame = arguments?.getBoolean("autoStart", false) ?: false
+        if (autoStartGame) {
+            cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+        }
+
         setupFaceDetector()
         setupGestureDetector()
         setupUI()
@@ -308,7 +323,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
             if (_binding == null || !isGameActive) return@runOnUiThread
             gestureGame?.skipRound()
             binding.gameOverlay.showShakeFeedback()
-            soundManager?.playShakeSkip()
+            soundManager?.playFailed()
         }
     }
 
@@ -316,12 +331,10 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
 
     override fun onCountdown(value: Int) {
         binding.gameOverlay.showCountdown(value)
-        soundManager?.playCountdownBeep(value)
     }
 
     override fun onCountdownGo() {
         binding.gameOverlay.showGo()
-        soundManager?.playGo()
     }
 
     override fun onRoundStart(round: Int, totalRounds: Int, prompt: GesturePrompt) {
@@ -344,7 +357,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
     override fun onGestureTimeout() {
         binding.gameOverlay.showTimeoutFeedback()
         binding.gameFaceEffects.showTimeoutEffect()
-        soundManager?.playTimeout()
+        soundManager?.playFailed()
     }
 
     override fun onGameOver(score: Int, correctCount: Int, totalRounds: Int, bestStreak: Int) {
@@ -357,6 +370,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
         }
         dialog.onClose = {
             stopGame()
+            findNavController().popBackStack(R.id.homeFragment, false)
         }
         dialog.show(parentFragmentManager, GameResultDialog.TAG)
     }
@@ -458,6 +472,11 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
                     imageCapture,
                     imageAnalysis
                 )
+
+                if (autoStartGame) {
+                    autoStartGame = false
+                    startGame()
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Camera startup failed", e)
                 Toast.makeText(
@@ -520,6 +539,22 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
             val isFrontCamera = cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
             binding.faceOverlay.setFaces(faces, imageWidth, imageHeight, isFrontCamera)
 
+            // Track mouth position for Finger_On_Mouth gesture detection.
+            // ML Kit returns landmarks in rotated-image space: x ∈ [0..imageHeight], y ∈ [0..imageWidth].
+            // We normalize to [0..1] and mirror x for front camera to match MediaPipe's coordinate space.
+            val face = faces.firstOrNull()
+            if (face != null) {
+                val mouth = face.getLandmark(FaceLandmark.MOUTH_BOTTOM)?.position
+                if (mouth != null) {
+                    val rawNormX = mouth.x / imageHeight
+                    mouthNormX = if (isFrontCamera) 1f - rawNormX else rawNormX
+                    mouthNormY = mouth.y / imageWidth
+                }
+            } else {
+                mouthNormX = -1f
+                mouthNormY = -1f
+            }
+
             // Forward face data to game face effects
             if (isGameActive) {
                 binding.gameFaceEffects.setFaceData(faces, imageWidth, imageHeight, isFrontCamera)
@@ -542,14 +577,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
 
             binding.handOverlay.setResults(result, imageWidth, imageHeight)
 
-            val detectedCategory: String? = if (result != null &&
-                result.gestures().isNotEmpty() &&
-                result.gestures()[0].isNotEmpty()
-            ) {
-                result.gestures()[0][0].categoryName()
-            } else {
-                null
-            }
+            val detectedCategory: String? = HandGestureHelper.resolveCategory(result, mouthNormX, mouthNormY)
 
             // Forward gesture to game engine
             if (isGameActive) {
