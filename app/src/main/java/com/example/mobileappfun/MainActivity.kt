@@ -1,26 +1,31 @@
 package com.example.mobileappfun
 
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.example.mobileappfun.databinding.ActivityMainBinding
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.mobileappfun.ui.login.LoginActivity
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    val mainViewModel: MainViewModel by viewModels {
+        MainViewModelFactory(applicationContext)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ── Retrieve authenticated user from LoginActivity ──
         val userId = intent.getLongExtra(LoginActivity.EXTRA_USER_ID, -1L)
         val username = intent.getStringExtra(LoginActivity.EXTRA_USERNAME) ?: "Player"
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        mainViewModel.setUser(userId, username)
 
         setupNavigation()
     }
@@ -29,8 +34,6 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
-
-        // Setup bottom navigation with nav controller
         binding.bottomNavigation.setupWithNavController(navController)
     }
 }

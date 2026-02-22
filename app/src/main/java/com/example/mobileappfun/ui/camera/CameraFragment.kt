@@ -18,6 +18,9 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
+import androidx.fragment.app.activityViewModels
+import com.example.mobileappfun.MainViewModel
+import com.example.mobileappfun.MainViewModelFactory
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -68,6 +71,10 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
 
     // Sound manager
     private var soundManager: GameSoundManager? = null
+
+    private val mainViewModel: MainViewModel by activityViewModels {
+        MainViewModelFactory(requireActivity().applicationContext)
+    }
 
     // Shake detection
     private lateinit var sensorManager: SensorManager
@@ -342,6 +349,7 @@ class CameraFragment : Fragment(), HandGestureHelper.GestureListener, GestureGam
 
     override fun onGameOver(score: Int, correctCount: Int, totalRounds: Int, bestStreak: Int) {
         soundManager?.playGameOver()
+        mainViewModel.saveGameScore(score, correctCount)
         val dialog = GameResultDialog.newInstance(score, correctCount, totalRounds, bestStreak)
         dialog.onPlayAgain = {
             stopGame()

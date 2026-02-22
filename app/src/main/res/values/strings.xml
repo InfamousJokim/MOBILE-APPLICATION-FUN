@@ -1,15 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Mobile App Fun</string>
+    <string name="app_name">Gesture Game</string>
 
     <!-- Navigation -->
-    <string name="nav_home">Home</string>
+    <string name="nav_home">Menu</string>
     <string name="nav_entities">Entities</string>
     <string name="nav_settings">Settings</string>
+    <string name="nav_camera">Play</string>
+    <string name="nav_leaderboard">Scores</string>
 
-    <!-- Home Screen -->
+    <!-- Home / Main Menu -->
+    <string name="game_title">GESTURE GAME</string>
+    <string name="game_subtitle">Brain Rot Knowledge</string>
     <string name="welcome_title">Welcome</string>
     <string name="welcome_message">Add your entities, components, and assets here!</string>
+    <string name="welcome_back">Welcome back,\n%s!</string>
+    <string name="btn_play_now">PLAY NOW</string>
+    <string name="btn_leaderboard">View Leaderboard</string>
+    <string name="best_score">Best Score</string>
+    <string name="best_score_value">🏆 %d pts</string>
+    <string name="no_score_yet">🎯 No games played yet</string>
+    <string name="home_hint">Use hand gestures to score points!\nShake your phone to skip a round.</string>
 
     <!-- Entities Screen -->
     <string name="entities_title">Entities</string>
@@ -18,9 +29,27 @@
 
     <!-- Settings Screen -->
     <string name="settings_title">Settings</string>
+    <string name="settings_sound">Sound Effects</string>
+    <string name="settings_sound_desc">Play audio cues during gameplay</string>
+    <string name="settings_vibration">Vibration</string>
+    <string name="settings_vibration_desc">Vibrate on gesture match</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_logout">Log Out</string>
+    <string name="settings_logout_confirm">Are you sure you want to log out?</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version 1.0</string>
+    <string name="settings_gesture_game">Gesture Game — match hand signs before time runs out!</string>
+
+    <!-- Leaderboard Screen -->
+    <string name="leaderboard_title">Leaderboard</string>
+    <string name="leaderboard_top">Top Players</string>
+    <string name="leaderboard_empty">No scores yet.\nBe the first to play!</string>
+    <string name="leaderboard_rank">Rank</string>
+    <string name="leaderboard_player">Player</string>
+    <string name="leaderboard_score">Score</string>
+    <string name="leaderboard_accuracy">%1$d/10 rounds</string>
 
     <!-- Camera Screen -->
-    <string name="nav_camera">Camera</string>
     <string name="camera_title">Camera</string>
     <string name="capture_photo">Capture Photo</string>
     <string name="switch_camera">Switch Camera</string>
@@ -49,4 +78,5 @@
     <string name="game_play_again">Play Again</string>
     <string name="game_close">Close</string>
     <string name="game_great_job">Great Job!</string>
+    <string name="score_saved">Score saved!</string>
 </resources>

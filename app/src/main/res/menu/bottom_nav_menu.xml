@@ -7,9 +7,9 @@
         android:title="@string/nav_home" />
 
     <item
-        android:id="@+id/entitiesFragment"
-        android:icon="@drawable/ic_entities"
-        android:title="@string/nav_entities" />
+        android:id="@+id/leaderboardFragment"
+        android:icon="@drawable/ic_leaderboard"
+        android:title="@string/nav_leaderboard" />
 
     <item
         android:id="@+id/cameraFragment"

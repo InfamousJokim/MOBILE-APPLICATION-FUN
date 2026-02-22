@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Legacy Material palette -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -8,27 +9,51 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Primary colors -->
-    <color name="primary">#FF6200EE</color>
-    <color name="primary_variant">#FF3700B3</color>
-    <color name="secondary">#FF03DAC5</color>
+    <!-- ── Game Dark Theme ───────────────────────── -->
 
-    <!-- Background colors -->
-    <color name="background">#FFFFFFFF</color>
-    <color name="surface">#FFFFFFFF</color>
-    <color name="error">#FFB00020</color>
+    <!-- Backgrounds -->
+    <color name="dark_background">#0A0A1A</color>
+    <color name="dark_surface">#12122A</color>
+    <color name="dark_card">#1A1A3E</color>
+    <color name="dark_card_elevated">#22224A</color>
+    <color name="dark_nav_background">#0D0D2B</color>
 
-    <!-- On colors -->
-    <color name="on_primary">#FFFFFFFF</color>
-    <color name="on_secondary">#FF000000</color>
-    <color name="on_background">#FF000000</color>
-    <color name="on_surface">#FF000000</color>
-    <color name="on_error">#FFFFFFFF</color>
+    <!-- Primary – vivid neon purple -->
+    <color name="primary">#7C4DFF</color>
+    <color name="primary_variant">#651FFF</color>
+    <color name="primary_dark">#3B1F8C</color>
+    <color name="on_primary">#FFFFFF</color>
 
-    <!-- Game colors -->
-    <color name="game_success">#FF4CAF50</color>
-    <color name="game_danger">#FFF44336</color>
-    <color name="game_warning">#FFFFC107</color>
-    <color name="game_streak_gold">#FFFFD700</color>
-    <color name="game_overlay_bg">#99000000</color>
+    <!-- Secondary – neon cyan -->
+    <color name="secondary">#00E5FF</color>
+    <color name="secondary_dark">#003F47</color>
+    <color name="on_secondary">#000000</color>
+
+    <!-- Text -->
+    <color name="text_primary">#E8E8FF</color>
+    <color name="text_secondary">#9090C0</color>
+    <color name="text_hint">#6060A0</color>
+
+    <!-- Nav item tint -->
+    <color name="nav_selected">#7C4DFF</color>
+    <color name="nav_unselected">#6060A0</color>
+
+    <!-- Game HUD -->
+    <color name="game_success">#00E676</color>
+    <color name="game_danger">#FF1744</color>
+    <color name="game_warning">#FFAB40</color>
+    <color name="game_streak_gold">#FFD700</color>
+    <color name="game_overlay_bg">#CC000000</color>
+
+    <!-- Leaderboard rank badges -->
+    <color name="rank_gold">#FFD700</color>
+    <color name="rank_silver">#C0C0C0</color>
+    <color name="rank_bronze">#CD7F32</color>
+    <color name="rank_default">#6060A0</color>
+
+    <!-- Accent colors -->
+    <color name="accent_green">#00E676</color>
+    <color name="accent_red">#FF1744</color>
+    <color name="error">#FF4444</color>
+    <color name="on_error">#FFFFFF</color>
 </resources>

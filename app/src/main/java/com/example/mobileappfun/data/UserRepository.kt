@@ -92,6 +92,13 @@ class UserRepository(private val db: AppDatabase) {
     fun getScoresForUser(userId: Long): Flow<List<ScoreEntity>> =
         db.scoreDao().getScoresForUser(userId)
 
+    /**
+     * Returns the highest score ever achieved by a specific user.
+     */
+    suspend fun getPersonalBest(userId: Long): Int? = withContext(Dispatchers.IO) {
+        db.scoreDao().getPersonalBest(userId)
+    }
+
     // ── Utilities ─────────────────────────────────────────────────────────────
 
     /**

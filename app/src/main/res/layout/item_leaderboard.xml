@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp"
+    android:background="@color/dark_card">
+
+    <!-- Rank badge -->
+    <TextView
+        android:id="@+id/rankText"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:text="1"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/rank_gold"
+        android:gravity="center"
+        android:background="@drawable/bg_rank_badge"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:text="#1" />
+
+    <!-- Username -->
+    <TextView
+        android:id="@+id/usernameText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Player"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintStart_toEndOf="@id/rankText"
+        app:layout_constraintEnd_toStartOf="@id/scoreText"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/accuracyText"
+        tools:text="PlayerName" />
+
+    <!-- Accuracy sub-text -->
+    <TextView
+        android:id="@+id/accuracyText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="10/10 rounds"
+        android:textSize="11sp"
+        android:textColor="@color/text_hint"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintStart_toEndOf="@id/rankText"
+        app:layout_constraintEnd_toStartOf="@id/scoreText"
+        app:layout_constraintTop_toBottomOf="@id/usernameText"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:text="8/10 rounds" />
+
+    <!-- Score -->
+    <TextView
+        android:id="@+id/scoreText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="250"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/game_streak_gold"
+        android:minWidth="64dp"
+        android:gravity="end"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:text="240" />
+
+    <!-- Separator line (drawn below by a View sibling) -->
+</androidx.constraintlayout.widget.ConstraintLayout>
