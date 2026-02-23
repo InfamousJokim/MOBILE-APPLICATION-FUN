@@ -115,7 +115,7 @@ private fun LoginCard(
 
             // ── Title ─────────────────────────────────────────────────────────
             Text(
-                text = "Brain Rot Knowledge",
+                text = "Monkey See, Monkey Do",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF7EB8F7),
